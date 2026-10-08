@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PetKart - All-in-One E-Commerce</title>
+    <!-- Load Supabase Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* === CSS STYLES === */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Roboto, Arial, sans-serif; }
+        body { background-color: #f1f3f6; }
+
+        /* Navbar */
+        .navbar { background-color: #2874f0; padding: 12px 0; display: flex; justify-content: center; position: sticky; top: 0; z-index: 100; }
+        .nav-content { width: 1200px; display: flex; align-items: center; gap: 30px; padding: 0 20px; }
+        .logo { color: white; font-style: italic; font-size: 22px; cursor: pointer; white-space: nowrap; }
+        .logo-plus { color: #ffe500; font-size: 14px; font-style: italic; }
+        .search-bar { flex: 1; padding: 10px 15px; border-radius: 2px; border: none; font-size: 14px; box-shadow: 0 2px 4px 0 rgba(0,0,0,.23); outline: none; }
+        .login-btn { background: white; color: #2874f0; padding: 6px 30px; border: none; border-radius: 2px; font-weight: bold; cursor: pointer; }
+        .nav-link { color: white; font-weight: bold; cursor: pointer; border:none; background:none; font-size: 15px; }
+        .cart-nav { color: white; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        .cart-badge { background: #ff6161; color: white; border-radius: 50%; padding: 2px 6px; font-size: 12px; }
+
+        /* Problem Banner */
+        .problem-banner { background: #ffe500; color: #212121; text-align: center; padding: 10px; font-weight: 500; font-size: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+        /* Category Filters */
+        .category-filters { display: flex; gap: 15px; margin-bottom: 20px; }
+        .cat-btn { background: white; border: 1px solid #e0e0e0; padding: 8px 20px; border-radius: 20px; cursor: pointer; font-weight: 500; color: #212121; transition: 0.2s; }
+        .cat-btn:hover { border-color: #2874f0; }
+        .cat-btn.active { background: #2874f0; color: white; border-color: #2874f0; }
+        .category-badge { background: #f1f3f6; color: #878787; font-size: 12px; padding: 4px 8px; border-radius: 4px; display: inline-block; margin-bottom: 10px; }
+
+        /* Layout */
+        .container { width: 1200px; margin: 20px auto; padding: 0 20px; display: flex; gap: 20px; }
+        .main-content { flex: 3; }
+        .sidebar { flex: 1; display: none; background: white; padding: 20px; box-shadow: 0 1px 2px 0 rgba(0,0,0,.2); height: fit-content; position: sticky; top: 120px; }
+
+        /* Product Grid */
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+        .card { background: white; padding: 20px; border-radius: 4px; text-align: center; transition: box-shadow 0.2s; box-shadow: 0 1px 2px 0 rgba(0,0,0,.1); }
+        .card:hover { box-shadow: 0 3px 16px 0 rgba(0,0,0,.11); }
+        .card .icon { font-size: 5rem; margin-bottom: 15px; }
+        .card h3 { font-size: 15px; font-weight: 500; color: #212121; margin-bottom: 10px; }
+        .card .price-row { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 15px; }
+        .card .price { font-size: 18px; font-weight: bold; color: #212121; }
+        .card .original { text-decoration: line-through; color: #878787; font-size: 14px; }
+        .card .discount { color: #388e3c; font-size: 14px; font-weight: bold; }
+        .add-btn { background: #ff9f00; color: white; border: none; padding: 10px 20px; border-radius: 2px; font-weight: bold; cursor: pointer; width: 100%; font-size: 15px; box-shadow: 0 1px 2px 0 rgba(0,0,0,.2); }
+        .add-btn:hover { background: #f39800; }
+
+        /* Cart Sidebar */
+        .cart-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #f0f0f0; }
+        .cart-controls { display: flex; gap: 10px; align-items: center; }
+        .qty-btn { background: #fff; border: 1px solid #e0e0e0; padding: 2px 8px; border-radius: 50%; cursor: pointer; }
+        .checkout-btn { background: #fb641b; color: white; width: 100%; padding: 15px; border: none; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px; box-shadow: 0 1px 2px 0 rgba(0,0,0,.2); transition: background 0.2s; }
+        .cart-total { font-size: 18px; font-weight: bold; display: flex; justify-content: space-between; margin-top: 15px; border-top: 2px dashed #e0e0e0; padding-top: 15px; }
+
+        /* Modals */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 200; }
+        .modal-content { background: white; width: 400px; margin: 100px auto; padding: 30px; border-radius: 4px; display: flex; flex-direction: column; gap: 15px; position: relative; }
+        .close { position: absolute; right: 20px; top: 15px; font-size: 24px; cursor: pointer; color: #878787; }
+        input, textarea, select { padding: 12px; border: 1px solid #e0e0e0; border-radius: 2px; font-size: 14px; width: 100%; outline: none; }
+        input:focus, textarea:focus, select:focus { border-color: #2874f0; }
+        .primary-btn { background: #fb641b; color: white; padding: 12px; border: none; border-radius: 2px; font-weight: bold; cursor: pointer; font-size: 15px; }
+        .secondary-btn { background: white; color: #2874f0; padding: 12px; border: none; font-weight: bold; cursor: pointer; box-shadow: 0 1px 2px 0 rgba(0,0,0,.2); }
+        #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 24px; border-radius: 4px; display: none; z-index: 300; }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar (NO FORM TAGS) -->
+    <header class="navbar">
+        <div class="nav-content">
+            <h1 class="logo">Pet<i>Kart</i> <span class="logo-plus">Plus</span></h1>
+            <input type="text" id="search-input" class="search-bar" placeholder="Search for products, brands and more" onkeyup="applyFilters()">
+            <button type="button" id="auth-btn" class="login-btn" onclick="openModal('login-modal')">Login</button>
+            <button type="button" id="address-btn" class="nav-link" onclick="openAddressModal()" style="display:none;">Address</button>
+            <button type="button" id="orders-btn" class="nav-link" onclick="openOrdersModal()" style="display:none;">Orders</button>
+            <div class="cart-nav" onclick="toggleCart()">
+                🛒 Cart <span id="cart-count" class="cart-badge">0</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Problem Statement Banner -->
+    <div class="problem-banner">
+        💡 "Pet owners need a convenient platform to purchase food, accessories, and healthcare products for pets."
+    </div>
+
+    <!-- Main Content -->
+    <div class="container">
+        <div class="main-content">
+            <!-- Category Filters -->
+            <div class="category-filters" id="category-filters">
+                <button type="button" class="cat-btn active" onclick="filterCategory('All', this)">All</button>
+                <button type="button" class="cat-btn" onclick="filterCategory('Food', this)">Food</button>
+                <button type="button" class="cat-btn" onclick="filterCategory('Accessories', this)">Accessories</button>
+                <button type="button" class="cat-btn" onclick="filterCategory('Healthcare', this)">Healthcare</button>
+            </div>
+
+            <div id="product-grid" class="grid">
+                <h2>Loading products...</h2>
+            </div>
+        </div>
+
+        <!-- Cart Sidebar -->
+        <div id="cart-sidebar" class="sidebar">
+            <h2>My Cart</h2>
+            <hr style="margin: 15px 0; border: 0; border-top: 1px solid #f0f0f0;">
+            <div id="cart-items"></div>
+            
+            <div class="cart-total">
+                <span>Total Amount:</span>
+                <span id="cart-total-price">$0.00</span>
+            </div>
+
+            <!-- Payment Mode Selection -->
+            <div style="margin-top: 15px; border-top: 2px dashed #e0e0e0; padding-top: 15px;">
+                <label style="font-weight: bold; font-size: 14px; color: #212121;">Payment Mode:</label>
+                <select id="payment-mode" style="margin-top: 8px;">
+                    <option value="UPI (Google Pay / PhonePe)">UPI (Google Pay / PhonePe)</option>
+                    <option value="Credit / Debit Card">Credit / Debit Card</option>
+                    <option value="Cash on Delivery">Cash on Delivery (COD)</option>
+                </select>
+            </div>
+
+            <button type="button" id="checkout-btn" class="checkout-btn" onclick="processCheckout()">PLACE ORDER</button>
+        </div>
+    </div>
+
+    <!-- Auth Modal (Sign Up / Login Toggle) -->
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('login-modal')">&times;</span>
+            <h2 id="auth-title">Sign Up for PetKart</h2>
+            <input type="email" id="email" placeholder="Enter Email" required>
+            <input type="password" id="password" placeholder="Enter Password (Min 6 chars)" required>
+            
+            <button type="button" id="main-auth-btn" onclick="handleAuth('signup')" class="primary-btn">Sign Up</button>
+            <button type="button" id="toggle-auth-btn" onclick="toggleAuthMode()" class="secondary-btn">Already have an account? Login</button>
+            
+            <p id="auth-msg" style="text-align: center; margin-top: 5px;"></p>
+        </div>
+    </div>
+
+    <!-- Address Modal -->
+    <div id="address-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('address-modal')">&times;</span>
+            <h2>Delivery Address</h2>
+            <input type="text" id="fname" placeholder="Full Name">
+            <input type="text" id="phone" placeholder="Phone Number">
+            <textarea id="address" placeholder="Complete Street Address" rows="3"></textarea>
+            <input type="text" id="pincode" placeholder="Pincode">
+            <button type="button" onclick="saveAddress()" class="primary-btn">Save Address</button>
+            <p id="address-msg" style="text-align: center;"></p>
+        </div>
+    </div>
+
+    <!-- Orders Modal -->
+    <div id="orders-modal" class="modal">
+        <div class="modal-content" style="width: 500px; max-height: 80vh; overflow-y: auto;">
+            <span class="close" onclick="closeModal('orders-modal')">&times;</span>
+            <h2>My Order History</h2>
+            <div id="orders-list">
+                <p>Loading orders...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast">Message</div>
+
+    <script>
+        /* === JAVASCRIPT LOGIC === */
+        
+        // 1. Initialize Supabase
+        const SUPABASE_URL = 'https://nczhcxvsxkbhqqgysurj.supabase.co'; 
+        
+        // 🚨 PASTE YOUR ANON KEY HERE:
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5jemhjeHZzeGtiaHFxZ3lzdXJqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE0MTczMDksImV4cCI6MjEwNjk5MzMwOX0.hlLjMYNtNrSGwSIcw-kYP7DpMsCS38T58SSTGmXT6H0';
+        
+        var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let currentUser = null;
+        let allProducts = [];
+        let cart = JSON.parse(localStorage.getItem('petkart_cart')) || [];
+        let isLoginMode = false;
+        let currentCategory = 'All';
+
+        // Prevent random form submissions from crashing the page
+        document.addEventListener('submit', (e) => e.preventDefault());
+
+        // 2. Initial Setup
+        document.addEventListener('DOMContentLoaded', async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                currentUser = session.user;
+                updateUIForLoggedInUser();
+            }
+            
+            supabase.auth.onAuthStateChange((event, session) => {
+                currentUser = session?.user || null;
+                if (currentUser) updateUIForLoggedInUser();
+                else updateUIForLoggedOutUser();
+            });
+
+            loadProducts();
+            updateCartUI();
+        });
+
+        // 3. Products & Filtering
+        async function loadProducts() {
+            const { data: products, error } = await supabase.from('products').select('*');
+            if (error || !products || products.length === 0) {
+                document.getElementById('product-grid').innerHTML = '<h3 style="grid-column: 1/-1; text-align: center;">No products found. (Did you run the SQL?)</h3>';
+                return;
+            }
+            allProducts = products;
+            renderProducts(allProducts);
+        }
+
+        function renderProducts(products) {
+            const grid = document.getElementById('product-grid');
+            if(products.length === 0) {
+                grid.innerHTML = '<h3 style="grid-column: 1/-1; text-align: center;">No products found in this category.</h3>';
+                return;
+            }
+            grid.innerHTML = products.map(p => `
+                <div class="card">
+                    <div class="icon">${p.image_url}</div>
+                    <div class="category-badge">${p.category || 'Product'}</div>
+                    <h3>${p.name}</h3>
+                    <div class="price-row">
+                        <span class="price">$${p.price}</span>
+                        <span class="original">$${p.original_price}</span>
+                        <span class="discount">${p.discount}</span>
+                    </div>
+                    <button type="button" class="add-btn" onclick="addToCart(${p.id})">ADD TO CART</button>
+                </div>
+            `).join('');
+        }
+
+        function filterCategory(category, buttonElement) {
+            currentCategory = category;
+            document.querySelectorAll('.cat-btn').forEach(btn => btn.classList.remove('active'));
+            buttonElement.classList.add('active');
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            
+            const filtered = allProducts.filter(p => {
+                const matchesSearch = p.name.toLowerCase().includes(query);
+                const matchesCategory = currentCategory === 'All' || p.category === currentCategory;
+                return matchesSearch && matchesCategory;
+            });
+            
+            renderProducts(filtered);
+        }
+
+        // 4. Cart & Mock Checkout Logic
+        function toggleCart() {
+            const sidebar = document.getElementById('cart-sidebar');
+            sidebar.style.display = sidebar.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function addToCart(productId) {
+            const product = allProducts.find(p => p.id === productId);
+            const existingItem = cart.find(item => item.id === productId);
+            
+            if (existingItem) existingItem.quantity += 1;
+            else cart.push({ ...product, quantity: 1 });
+            
+            saveCart();
+            showToast(`${product.name} added to cart!`);
+            document.getElementById('cart-sidebar').style.display = 'block';
+        }
+
+        function changeQuantity(productId, delta) {
+            const item = cart.find(i => i.id === productId);
+            if (item) {
+                item.quantity += delta;
+                if (item.quantity <= 0) cart = cart.filter(i => i.id !== productId);
+                saveCart();
+            }
+        }
+
+        function saveCart() {
+            localStorage.setItem('petkart_cart', JSON.stringify(cart));
+            updateCartUI();
+        }
+
+        function updateCartUI() {
+            const cartItemsContainer = document.getElementById('cart-items');
+            const cartCount = document.getElementById('cart-count');
+            const cartTotal = document.getElementById('cart-total-price');
+            
+            const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+            cartCount.innerText = totalItems;
+
+            if (cart.length === 0) {
+                cartItemsContainer.innerHTML = '<p style="text-align:center; color:#878787;">Your cart is empty!</p>';
+                cartTotal.innerText = '$0.00';
+                return;
+            }
+
+            let totalCost = 0;
+            cartItemsContainer.innerHTML = cart.map(item => {
+                const itemTotal = item.price * item.quantity;
+                totalCost += itemTotal;
+                return `
+                    <div class="cart-item">
+                        <div>
+                            <div style="font-size:24px;">${item.image_url}</div>
+                            <div style="font-size:14px; font-weight:500;">${item.name.substring(0,15)}...</div>
+                            <div style="color:#2874f0; font-weight:bold;">$${item.price}</div>
+                        </div>
+                        <div class="cart-controls">
+                            <button type="button" class="qty-btn" onclick="changeQuantity(${item.id}, -1)">-</button>
+                            <span>${item.quantity}</span>
+                            <button type="button" class="qty-btn" onclick="changeQuantity(${item.id}, 1)">+</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            cartTotal.innerText = `$${totalCost.toFixed(2)}`;
+        }
+
+        async function processCheckout() {
+            if (cart.length === 0) return showToast("Add items to cart first!");
+            if (!currentUser) {
+                showToast("Please login to place an order.");
+                openModal('login-modal');
+                return;
+            }
+            
+            const { data: address } = await supabase.from('customers').select('*').eq('user_id', currentUser.id).single();
+            if (!address || !address.address) {
+                showToast("Please save your delivery address first.");
+                openAddressModal();
+                return;
+            }
+
+            const checkoutBtn = document.getElementById('checkout-btn');
+            const paymentMode = document.getElementById('payment-mode').value;
+            const originalText = checkoutBtn.innerText;
+
+            checkoutBtn.innerText = "⏳ Processing...";
+            checkoutBtn.disabled = true;
+            checkoutBtn.style.opacity = "0.7";
+            checkoutBtn.style.cursor = "wait";
+
+            const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+            setTimeout(async () => {
+                // Save order to Supabase database
+                await supabase.from('orders').insert([{
+                    user_id: currentUser.id,
+                    items: cart,
+                    total_price: total,
+                    payment_mode: paymentMode
+                }]);
+
+                cart = [];
+                saveCart();
+                toggleCart();
+                showToast(`🎉 Order placed via ${paymentMode}!`);
+                
+                checkoutBtn.innerText = originalText;
+                checkoutBtn.disabled = false;
+                checkoutBtn.style.opacity = "1";
+                checkoutBtn.style.cursor = "pointer";
+            }, 2000);
+        }
+
+        // 5. Authentication
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            const title = document.getElementById('auth-title');
+            const mainBtn = document.getElementById('main-auth-btn');
+            const toggleBtn = document.getElementById('toggle-auth-btn');
+            const msgBox = document.getElementById('auth-msg');
+            
+            msgBox.innerText = ''; 
+
+            if (isLoginMode) {
+                title.innerText = "Login to PetKart";
+                mainBtn.innerText = "Login";
+                mainBtn.onclick = () => handleAuth('login');
+                toggleBtn.innerText = "New to PetKart? Sign Up";
+            } else {
+                title.innerText = "Sign Up for PetKart";
+                mainBtn.innerText = "Sign Up";
+                mainBtn.onclick = () => handleAuth('signup');
+                toggleBtn.innerText = "Already have an account? Login";
+            }
+        }
+
+        async function handleAuth(action) {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const msgBox = document.getElementById('auth-msg');
+            
+            if(password.length < 6) {
+                msgBox.innerText = "Password must be at least 6 characters.";
+                msgBox.style.color = "red";
+                return;
+            }
+
+            msgBox.innerText = "Processing...";
+            msgBox.style.color = "black";
+
+            let result;
+            if (action === 'signup') {
+                result = await supabase.auth.signUp({ email, password });
+            } else {
+                result = await supabase.auth.signInWithPassword({ email, password });
+            }
+
+            if (result.error) {
+                msgBox.innerText = result.error.message;
+                msgBox.style.color = "red";
+            } else {
+                closeModal('login-modal');
+                showToast(action === 'signup' ? "Account created!" : "Logged in successfully!");
+            }
+        }
+
+        function updateUIForLoggedInUser() {
+            const authBtn = document.getElementById('auth-btn');
+            authBtn.innerText = "Logout";
+            authBtn.className = "login-btn";
+            authBtn.onclick = async () => {
+                await supabase.auth.signOut();
+                showToast("Logged out successfully");
+            };
+            document.getElementById('address-btn').style.display = 'block';
+            document.getElementById('orders-btn').style.display = 'block';
+        }
+
+        function updateUIForLoggedOutUser() {
+            const authBtn = document.getElementById('auth-btn');
+            authBtn.innerText = "Login";
+            authBtn.onclick = () => openModal('login-modal');
+            document.getElementById('address-btn').style.display = 'none';
+            document.getElementById('orders-btn').style.display = 'none';
+        }
+
+        // 6. Address Management
+        async function openAddressModal() {
+            if (!currentUser) return;
+            
+            const { data } = await supabase.from('customers').select('*').eq('user_id', currentUser.id).single();
+            
+            if (data) {
+                document.getElementById('fname').value = data.full_name || '';
+                document.getElementById('phone').value = data.phone || '';
+                document.getElementById('address').value = data.address || '';
+                document.getElementById('pincode').value = data.pincode || '';
+            }
+            document.getElementById('address-msg').innerText = '';
+            openModal('address-modal');
+        }
+
+        async function saveAddress() {
+            if (!currentUser) return;
+            
+            const payload = {
+                user_id: currentUser.id,
+                full_name: document.getElementById('fname').value,
+                phone: document.getElementById('phone').value,
+                address: document.getElementById('address').value,
+                pincode: document.getElementById('pincode').value
+            };
+
+            const { error } = await supabase.from('customers').upsert(payload);
+            
+            const msgBox = document.getElementById('address-msg');
+            if (error) {
+                msgBox.innerText = error.message;
+                msgBox.style.color = "red";
+            } else {
+                msgBox.innerText = "Address Saved Successfully!";
+                msgBox.style.color = "green";
+                setTimeout(() => closeModal('address-modal'), 1500);
+            }
+        }
+
+        // 7. Orders Management
+        async function openOrdersModal() {
+            if (!currentUser) return;
+            openModal('orders-modal');
+            const ordersList = document.getElementById('orders-list');
+            ordersList.innerHTML = '<p style="text-align:center;">Fetching your orders...</p>';
+            
+            const { data, error } = await supabase
+                .from('orders')
+                .select('*')
+                .eq('user_id', currentUser.id)
+                .order('created_at', { ascending: false });
+                
+            if (error || !data || data.length === 0) {
+                ordersList.innerHTML = '<p style="text-align:center; color:#878787;">You have no past orders.</p>';
+                return;
+            }
+            
+            ordersList.innerHTML = data.map(order => {
+                const date = new Date(order.created_at).toLocaleDateString();
+                const itemsHtml = order.items.map(i => `${i.name} (x${i.quantity})`).join('<br>');
+                return `
+                    <div style="border: 1px solid #e0e0e0; padding: 15px; margin-bottom: 10px; border-radius: 4px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px; color: #878787;">
+                            <span>Order #${order.id}</span>
+                            <span>${date}</span>
+                        </div>
+                        <div style="margin-bottom: 10px; font-weight: 500; font-size: 14px; line-height: 1.5;">
+                            ${itemsHtml}
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 15px; border-top: 1px dashed #e0e0e0; padding-top: 10px;">
+                            <span style="font-size: 13px; color: #878787;">Paid via ${order.payment_mode}</span>
+                            <span style="color: #388e3c;">$${order.total_price.toFixed(2)}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 8. Utilities
+        function openModal(id) { document.getElementById(id).style.display = 'block'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            toast.style.display = 'block';
+            setTimeout(() => toast.style.display = 'none', 3000);
+        }
+    </script>
+</body>
+</html>
